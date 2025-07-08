@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  minio:
+    image: quay.io/minio/minio
+    container_name: {{ container_name }}
+    ports:
+      - "{{ api_port }}:9000" # Espone porta API MinIO sulla porta host 9000
+      - "{{ console_port }}:9001" # Espone la console web sullla porta 9001
+    environment:
+      MINIO_ROOT_USER: {{ minio_user }} # Access key per autenticazione MinIO
+      MINIO_ROOT_PASSWORD: {{ minio_password }} # Secret key per autenticazione MinIO
+    volumes:
+      - {{ volume_name }}:/data # Volume persistente per i dati MinIO
+    command: minio server /data --console-address ":9001" #Avvio MinIO con interfaccia web sulla porta 9001
+    networks:
+      - backend
+      - proxy  # Rete condivisa con Traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`{{ minio_domain }}`)" # Regola per instradare il traffico basata sul nome di dominio
+      - "traefik.http.routers.minio.entrypoints=websecure"  # EntryPoint HTTPS
+      - "traefik.http.routers.minio.service=minio"
+      - "traefik.http.services.minio.loadbalancer.server.scheme=http"  # Protocollo usato tra Traefik e MinIO
+      - "traefik.http.routers.minio.tls=true"
+      - "traefik.http.routers.minio.tls.certresolver=letsencrypt"  # Certificato automatico con Let's Encrypt
+      - "traefik.http.services.minio.loadbalancer.server.port=9001"  # Sovrascrive la porta API con quella della console web (potenziale errore o intenzionale)
+      - "traefik.docker.network=traefik_proxy"
+
+volumes:
+  {{ volume_name }}:  # Volume Docker per la persistenza dei dati
+
+networks:
+  backend:
+    driver: bridge
+  proxy:
+    external: true 
+    name: "traefik_proxy" 

@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"       # HTTP
+      - "443:443"     # HTTPS
+      - "8080:8080"   # Dashboard (opzionale)
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"  # Solo per sviluppo, non raccomandato in produzione
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.le.acme.email=tuo@email.it"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - traefik_proxy
+
+volumes:
+  traefik_letsencrypt:
+
+networks:
+  traefik_proxy:
+    name: traefik_proxy
+    driver: bridge

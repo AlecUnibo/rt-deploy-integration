@@ -1,0 +1,1 @@
+Prova creazione file tramite API con MinIO
